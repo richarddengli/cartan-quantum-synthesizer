@@ -7,11 +7,11 @@ from CQS.util.IO import tuplesToMatrix
 from CQS.util.verification import Trotter, exactU, PauliExpUnitary, KHK
 
 sites = 6
-randCoNumpy = np.random.rand(16)
+randCoNumpy = np.random.rand(10)
 randCoList = []
 for i in randCoNumpy:
     randCoList.append(i)
-model = [(randCoList,'tfxy', False)]
+model = [(randCoList,'xy', False)]
 xy = Hamiltonian(sites,model)
 print(xy.getHamiltonian())
 
