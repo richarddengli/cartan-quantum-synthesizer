@@ -15,7 +15,7 @@ def synth_cartan(paulievolutiongate):
     """Cartan synthesis of a PauliEvolutionGate instance based on the method developed by the Kemper group.
 
         Args:
-            paulievolutiongate (PauliEvolutionGate): a high-level definition of the unitary which implements the time evolution under a Hamiltonian consisting of Pauli terms.
+            PauliEvolution (PauliEvolutionGate): a high-level definition of the unitary which implements the time evolution under a Hamiltonian consisting of Pauli terms.
 
         Return:
             QuantumCircuit: a circuit implementation of the PauliEvolutionGate via a Cartan Decomposition.
@@ -24,17 +24,17 @@ def synth_cartan(paulievolutiongate):
             QiskitError: if arg is not an instance of PauliEvolutionGate.
     """
 
-    # Raise an error if the object to be synthesized is not a PauliEvolutionGate.
+    # Raise an error if the object to be synthesized is not a PauliEvolution.
     if type(paulievolutiongate) is not PauliEvolutionGate:
-        raise QiskitError("Can only synthesize PauliEvolutionGate instances.")
+        raise QiskitError("Can only synthesize PauliEvolution instances.")
 
-    # Get the number of qubits of the PauliEvolutionGate.
+    # Get the number of qubits of the PauliEvolution.
     num_qubits = paulievolutiongate.num_qubits
 
     # Get the time to evolve for.
     time_evolve = paulievolutiongate.time
 
-    # Get the Hamiltonian of the PauliEvolutionGate.
+    # Get the Hamiltonian of the PauliEvolution.
     Ham = paulievolutiongate.operator
 
     # Get each PauliString and corresponding coefficient.
@@ -56,8 +56,6 @@ def synth_cartan(paulievolutiongate):
     # Make tuple of lists to later create Hamiltonian object.
     Ham_terms = tuple([Ham_PauliCoeffs, Ham_PauliTuples])
     
-    # For now, assume that H is a Heisenberg Hamiltonian.
-    # Later modify by making custom Hamiltonian.
     # Later look into involution to be used,
     # But for now use a working default involution.
 
@@ -68,7 +66,7 @@ def synth_cartan(paulievolutiongate):
     CQS_Ham.addTerms(Ham_terms)
 
     # Check each term has been added.
-    print(CQS_Ham.getHamiltonian(type="printText"))
+    # print(CQS_Ham.getHamiltonian(type="printText"))
 
     # Try to perform a Cartan involution on the Hamiltonian
     # using the defauls evenOdd Decomposition.
@@ -89,7 +87,6 @@ def synth_cartan(paulievolutiongate):
 
     # Make Qiskit Quantum Circuit.
     qc = QuantumCircuit(num_qubits)
-    qc.barrier()
 
     # K^\dag.
     for kTuple, kCoef in zip(kTuples, kCoefs):
@@ -115,35 +112,10 @@ def synth_cartan(paulievolutiongate):
     return qc
 
 
-# Testing.
-from qiskit.circuit.library import PauliEvolutionGate
-from qiskit.opflow import I, X, Y, Z
-test_heisenberg_ham = (X^X^I) + (Y^Y^I) + (Z^Z^I) + (I^X^X) + (I^Y^Y) + (I^Z^Z)
-test_time_evolve = 3
-test_paulievolutiongate = PauliEvolutionGate(test_heisenberg_ham, time=test_time_evolve)
-qc = synth_cartan(test_paulievolutiongate)
-print(qc)
-
-from qiskit import Aer, transpile
-unitary_simulator = Aer.get_backend('unitary_simulator')
-qc_transp = transpile(qc, unitary_simulator)
-final_unitary_cartan = unitary_simulator.run(qc_transp).result().get_unitary()
-
-import scipy
-from qiskit.quantum_info import SparsePauliOp
-H = SparsePauliOp(["XXI", "YYI", "ZZI", "IXX", "IYY", "IZZ"], 
-                  np.array([1, 1, 1, 1, 1, 1])).to_matrix()
-propagator = scipy.linalg.expm(-1j*H*test_time_evolve)
-matrix_norm = np.linalg.norm(propagator - final_unitary_cartan)
-print("matrix norm of the difference between the ideal propagator and that obtained by cartan decomposition: \n",
-       matrix_norm)
-
-
 # Define the High Level Synthesis Plugin.
 class CartanPlugin(HighLevelSynthesisPlugin):
 
-    def run(self, paulievolutiongate, **options):
-
-        print("Running Cartan Synthesis Plugin")
-
-        return synth_cartan(paulievolutiongate)
+    def run(self, PauliEvolution):
+        
+        print("Running Cartan Synthesis Plugin...")
+        return synth_cartan(PauliEvolution)
