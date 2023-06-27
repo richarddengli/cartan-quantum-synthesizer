@@ -8,14 +8,16 @@ from CQS.methods import Hamiltonian, Cartan, FindParameters
 import CQS.util.IO as IO
 
 import numpy as np
+import random
 
 
 # Define the function to synthesize a given PauliEvolutionGate
-def synth_cartan(paulievolutiongate):
+def synth_cartan(paulievolutiongate, random_seed):
     """Cartan synthesis of a PauliEvolutionGate instance based on the method developed by the Kemper group.
 
         Args:
-            PauliEvolution (PauliEvolutionGate): a high-level definition of the unitary which implements the time evolution under a Hamiltonian consisting of Pauli terms.
+            paulievolutiongate (PauliEvolutionGate): a high-level definition of the unitary which implements the time evolution under a Hamiltonian consisting of Pauli terms.
+            random_seed: seed used to set the ordering of factors in K and the starting element of h.
 
         Return:
             QuantumCircuit: a circuit implementation of the PauliEvolutionGate via a Cartan Decomposition.
@@ -71,10 +73,15 @@ def synth_cartan(paulievolutiongate):
     # Try to perform a Cartan involution on the Hamiltonian
     # using the defauls evenOdd Decomposition.
     # If H is not contained in the -1 eigenspace, raise an error.
-    try:
-        CQS_Cartan = Cartan(CQS_Ham)
-    except Exception as e:
-        print(e)
+
+    CQS_Cartan = Cartan(CQS_Ham, manualMode=1)
+    CQS_Cartan.g = CQS_Cartan.makeGroup(CQS_Cartan.HTuples)
+    CQS_Cartan.decompose(involutionName = 'evenOdd')
+
+    random.seed(random_seed)
+    random.shuffle(CQS_Cartan.k)
+    CQS_Cartan.subAlgebra(seedList = [random.choice(CQS_Cartan.m)])
+    
 
     # Generate the parameters via classical optimization of the cost function.
     CQS_parameters = FindParameters(CQS_Cartan)
@@ -115,7 +122,7 @@ def synth_cartan(paulievolutiongate):
 # Define the High Level Synthesis Plugin.
 class CartanPlugin(HighLevelSynthesisPlugin):
 
-    def run(self, PauliEvolution):
+    def run(self, PauliEvolution, random_seed):
         
         print("Running Cartan Synthesis Plugin...")
-        return synth_cartan(PauliEvolution)
+        return synth_cartan(PauliEvolution, random_seed)
