@@ -1,0 +1,2 @@
+[qiskit.synthesis]
+PauliEvolution.cartan = qiskit_cartan.cartan_plugin:CartanPlugin

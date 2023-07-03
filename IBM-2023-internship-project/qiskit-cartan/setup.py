@@ -13,12 +13,12 @@ from setuptools import setup, find_packages
 
 # add entrypoint for our plugin
 setup(
-    name="cartan-quantum-synthesizer",
-    version="0",
+    name="CQS-qiskit-plugin",
+    version="0.1",
     packages=find_packages(),
     entry_points={
             'qiskit.synthesis': [
-                'PauliEvolution.cartan2 = qiskit_cartan.cartan_plugin:CartanPlugin',
+                'PauliEvolution.cartan = qiskit_cartan.cartan_plugin:CartanPlugin',
             ],
     },
 )

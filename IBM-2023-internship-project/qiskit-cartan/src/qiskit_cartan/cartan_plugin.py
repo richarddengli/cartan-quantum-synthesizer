@@ -73,15 +73,20 @@ def synth_cartan(paulievolutiongate, random_seed):
     # Try to perform a Cartan involution on the Hamiltonian
     # using the defauls evenOdd Decomposition.
     # If H is not contained in the -1 eigenspace, raise an error.
+    try:
+        CQS_Cartan = Cartan(CQS_Ham, manualMode=1)
+        CQS_Cartan.g = CQS_Cartan.makeGroup(CQS_Cartan.HTuples)
+        CQS_Cartan.decompose(involutionName = 'evenOdd')
+    except Exception as e:
+        print(e)
 
-    CQS_Cartan = Cartan(CQS_Ham, manualMode=1)
-    CQS_Cartan.g = CQS_Cartan.makeGroup(CQS_Cartan.HTuples)
-    CQS_Cartan.decompose(involutionName = 'evenOdd')
-
+    # Set the chosen random seed.
+    # Then permute the factors of k in place.
+    # Also randomly choose an element of m as a starting element
+    # of the Cartan subalgebra h.
     random.seed(random_seed)
     random.shuffle(CQS_Cartan.k)
     CQS_Cartan.subAlgebra(seedList = [random.choice(CQS_Cartan.m)])
-    
 
     # Generate the parameters via classical optimization of the cost function.
     CQS_parameters = FindParameters(CQS_Cartan)

@@ -1,0 +1,6 @@
+setup.py
+CQS_qiskit_plugin.egg-info/PKG-INFO
+CQS_qiskit_plugin.egg-info/SOURCES.txt
+CQS_qiskit_plugin.egg-info/dependency_links.txt
+CQS_qiskit_plugin.egg-info/entry_points.txt
+CQS_qiskit_plugin.egg-info/top_level.txt
