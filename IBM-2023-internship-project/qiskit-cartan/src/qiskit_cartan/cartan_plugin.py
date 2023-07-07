@@ -10,13 +10,15 @@ import CQS.util.IO as IO
 import numpy as np
 import random
 
+# NEED TO UPDATE THIS TO A MORE EFFICIENT STRUCTURE, AS IMPLEMENTED IN synth_cartan_many.py
 
-# Define the function to synthesize a given PauliEvolutionGate
+# Define the function to synthesize a given PauliEvolutionGate.
 def synth_cartan(paulievolutiongate, random_seed):
     """Cartan synthesis of a PauliEvolutionGate instance based on the method developed by the Kemper group.
 
         Args:
-            paulievolutiongate (PauliEvolutionGate): a high-level definition of the unitary which implements the time evolution under a Hamiltonian consisting of Pauli terms.
+            paulievolutiongate (PauliEvolutionGate): a high-level definition of the unitary which implements
+            the time evolution under a Hamiltonian consisting of Pauli terms.
             random_seed: seed used to set the ordering of factors in K and the starting element of h.
 
         Return:

@@ -3,7 +3,7 @@ In this file, we will outline all the steps necessary to write and use a custom 
 
 ## Writing a plugin
 Transpilation is the process of transforming some abstract quantum circuit into a realistic circuit executable on the desired backend. In Qiskit, this overall transformation is broken down into conceptually clear "stages", which are in turn composed of single circuit transformations known as "transpiler passes".
-In particular, the transpilation workflow can be customized through "plugins", which allow the developer to implement their own transpiler passes beyond those already installed in Qiskit. This is just an application of the more general idea of [entry points](https://setuptools.pypa.io/en/latest/userguide/entry_point.html) in the `setuptools` Python library.
+In particular, the transpilation workflow can be customized through "plugins", which allow the developer to implement their own transpiler passes beyond those already installed in Qiskit. Qiskit plugins leverage the more general functionality of [entry points](https://setuptools.pypa.io/en/latest/userguide/entry_point.html) in the `setuptools` Python library.
 
 To write a plugin, follow these steps.
 
@@ -11,7 +11,7 @@ To write a plugin, follow these steps.
 2. Create a master directory for the plugin called `<master_repo_name>` with the subfolder called `src\<source_subfolder_name>`. This subfolder will contain the source code for the plugin (separating it from other auxilliary files, such as documentation, testing, and the like). The "src" is not strictly necessary, but it is a good reminder of its purpose.
 3. In `src\<source_folder_name>`, create an empty `__init__.py` file. This will tell Python to treat the `src\<source_folder_name>` folder as a Python package (to be later interfaced with Qiskit).
 4. In `src\<source_folder_name>`, create an empty `<plugin_file_name>.py` file. 
-5. In `<plugin_file_name>.py`, we shall inherit a Qiskit plugin class. Here we demonstrate with the example of inheriting a `HighLevelSynthesisPlugin` class, thereby creating a plugin for a high-level synthesis pass. This pass traverses each gate of a `QuantumCircuit` instance; if that gate is a highlevel_object, we shall transform it using a custom function `convert_highlevel_object`. This is implemented by the following code:
+5. In `<plugin_file_name>.py`, we shall inherit a Qiskit plugin class. Here we demonstrate with the example of inheriting a `HighLevelSynthesisPlugin` class, thereby creating a plugin for a high-level synthesis pass. This pass traverses each gate of a `QuantumCircuit` instance; if that gate is a highlevel_object, we shall synthesize it using a custom function `convert_highlevel_object`. This is implemented by the following code:
     
     ```
     def convert_highlevel_object(highlevel_object, **options):
@@ -54,19 +54,39 @@ To use a plugin, follow these steps.
     HLS_plugin_manager = HighLevelSynthesisPluginManager()
     print(HLS_plugin_manager.plugins.names())
     ```
-4. To use the plugin as a single transpiler pass, run the following code:
+4. Run the following:
     ```
     from qiskit.transpiler.passes.synthesis.high_level_synthesis import HLSConfig
 
-    hls_config = HLSConfig(<highlevel_object_name>=[("<plugin_name>", {**options**})])
+    hls_config = HLSConfig(<highlevel_object_name>=[("<plugin_name>", {**options})])
+    ```
+    Ajust the code accordingly for your own plugin.
+
+    Then to use the high-level plugin as a single transpiler pass, run the following:
+    ```
+    from qiskit.transpiler import PassManager
+    
     pm = PassManager()
     pm.append(HighLevelSynthesis(hls_config=hls_config))
     qc_after = pm.run(qc_before)
-    qc_after.draw()
     ```
+    where `qc_before` is the circuit to be transpiled.
 
-    Alternatively, 
+    Alternatively, to use the plugin as part of a complete transpilation workflow as , run the following:
+    ```
+    from qiskit.compiler import transpile
+
+    qc_after = transpile(qc_before, backend, hls_config=hls_config)
+    ```
+    where `backend` is the target backend.
 
 
-    Ajust the code accordingly for your own plugin.
 
+## Tips
+- To debug any transpilation issues, it is helpful to run
+    ```
+    import logging
+
+    logging.basicConfig(level='DEBUG')
+    ```
+    before any testing.
