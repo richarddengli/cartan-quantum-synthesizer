@@ -10,7 +10,76 @@ import CQS.util.IO as IO
 import numpy as np
 import random
 
-# NEED TO UPDATE THIS TO A MORE EFFICIENT STRUCTURE, AS IMPLEMENTED IN synth_cartan_many.py
+# To check transpiled circuit has same matrix norm, convert both original and transpiled
+# qcs to operators then use the equiv() method from the quantum_info module.
+# For basis gates, use RX, RY, RZ, CX.
+# translation_method choice (unroller vs. translator) shouldn't matter too much.
+# For Hamiltonian, use the 1D Heisenberg model with Next-to nearest and nearest neighbour 
+# coupling with open boundary conditions (NNN & open).
+
+# 3q NNN-open on 3 linear qubits with: IXX, XXI, ...
+# 3q NNN-open on 4 Y-shaped qubits: IIXX, IXXI, ...
+# i.e. same Hamiltonian except append an identity for the leftmost qubit, 
+# with coupling_map = [[0, 1], [0, 2], [0, 3], [1, 0], [2, 0], [3, 0]],
+# i.e qubit 0 is the central qubit.
+
+
+# Define the function to create a Qiskit QuantumCircuit given Cartan parameters.
+def generate_cartan_circuit(CQS_Cartan, time_evolve):
+    
+    # Generate the parameters via classical optimization of the cost function.
+    CQS_parameters = FindParameters(CQS_Cartan)
+
+    # Store optimization results.
+    kTuples = CQS_parameters.cartan.k
+    kCoefs = CQS_parameters.kCoefs
+    hTuples = CQS_parameters.cartan.h
+    hCoefs = CQS_parameters.hCoefs
+
+    # Retrieve number of qubits from Cartan object.
+    num_qubits = CQS_Cartan.hamiltonian.sites
+
+    # Generate Qiskit Quantum Circuit that implemenets the Cartan Decomp.
+    qc = QuantumCircuit(num_qubits)
+
+    # K^\dag.
+    for kTuple, kCoef in zip(kTuples, kCoefs):
+
+        kString = str(IO.paulilabel(kTuple))
+        gate = PauliEvolutionGate(Pauli(kString[::-1]), time=kCoef) 
+        qc.append(gate, range(num_qubits))
+
+    qc.barrier()
+
+    # h.
+    for hTuple, hCoef in zip(hTuples, hCoefs):
+
+        hString = str(IO.paulilabel(hTuple))
+        gate = PauliEvolutionGate(Pauli(hString[::-1]), 
+                                time=np.real(hCoef)*time_evolve) # WLOG convert complex to real
+        qc.append(gate, range(num_qubits))
+
+    qc.barrier()
+
+    # K.
+    for kTuple, kCoef in reversed(list(zip(kTuples, kCoefs))):
+
+        kString = str(IO.paulilabel(kTuple))
+        gate = PauliEvolutionGate(Pauli(kString[::-1]), time=-kCoef)
+        qc.append(gate, range(num_qubits))
+
+    return qc
+
+
+# Define function to convert each Pauli string to a tuple,
+# e.g "IXYZ" -> (0, 1, 2, 3).
+def pauli_string_to_tuple(pauli_string):
+
+    pauli_mapping = {'I': 0, 'X': 1, 'Y': 2, 'Z': 3}
+    pauli_tuple = tuple(pauli_mapping[pauli] for pauli in pauli_string)
+    
+    return pauli_tuple
+
 
 # Define the function to synthesize a given PauliEvolutionGate.
 def synth_cartan(paulievolutiongate, random_seed):
@@ -19,10 +88,13 @@ def synth_cartan(paulievolutiongate, random_seed):
         Args:
             paulievolutiongate (PauliEvolutionGate): a high-level definition of the unitary which implements
             the time evolution under a Hamiltonian consisting of Pauli terms.
-            random_seed: seed used to set the ordering of factors in K and the starting element of h.
+            random_seed (Int): seed to set the ordering of factors in K and the starting element of h. 
+                               Avoid using 0 to prevent unusual behavior.
+                               If equal to -1, use the lexicographic ordering of pauli factors in K. 
+                               Otherwise, use a random ordering.
 
         Return:
-            QuantumCircuit: a circuit implementation of the PauliEvolutionGate via a Cartan Decomposition.
+            QuantumCircuit: a circuit implementation of the input PauliEvolutionGate via a Cartan Decomposition.
 
         Raises:
             QiskitError: if arg is not an instance of PauliEvolutionGate.
@@ -43,15 +115,7 @@ def synth_cartan(paulievolutiongate, random_seed):
 
     # Get each PauliString and corresponding coefficient.
     Ham_Paulis = Ham.paulis
-
     Ham_PauliStrings = [pauli.to_label() for pauli in Ham_Paulis]
-
-    # Define function to convert each string to a tuple
-    # e.g "IXYZ" -> (0, 1, 2, 3).
-    def pauli_string_to_tuple(pauli_string):
-        pauli_mapping = {'I': 0, 'X': 1, 'Y': 2, 'Z': 3}
-        pauli_tuple = tuple(pauli_mapping[pauli] for pauli in pauli_string)
-        return pauli_tuple
 
     # Convert each string to a tuple.
     Ham_PauliTuples = list(pauli_string_to_tuple(string) for string in Ham_PauliStrings)
@@ -76,52 +140,32 @@ def synth_cartan(paulievolutiongate, random_seed):
     # using the defauls evenOdd Decomposition.
     # If H is not contained in the -1 eigenspace, raise an error.
     try:
+
         CQS_Cartan = Cartan(CQS_Ham, manualMode=1)
         CQS_Cartan.g = CQS_Cartan.makeGroup(CQS_Cartan.HTuples)
         CQS_Cartan.decompose(involutionName = 'evenOdd')
+
     except Exception as e:
+        
         print(e)
 
     # Set the chosen random seed.
-    # Then permute the factors of k in place.
-    # Also randomly choose an element of m as a starting element
-    # of the Cartan subalgebra h.
     random.seed(random_seed)
-    random.shuffle(CQS_Cartan.k)
+
+    # Sort factors of k lexicographically in placeif random_seed == -1; 
+    # otherwise, randomly shuffle elements of k in place.
+    if random_seed == -1:
+        CQS_Cartan.k.sort() 
+    else:
+        random.shuffle(CQS_Cartan.k)
+
+    # Randomly choose an element of m as a starting element
+    # of the Cartan subalgebra h.
     CQS_Cartan.subAlgebra(seedList = [random.choice(CQS_Cartan.m)])
 
-    # Generate the parameters via classical optimization of the cost function.
-    CQS_parameters = FindParameters(CQS_Cartan)
+    # Optimize cost function and create circuit.
+    qc = generate_cartan_circuit(CQS_Cartan, time_evolve)
 
-    # Store results.
-    kTuples = CQS_parameters.cartan.k
-    kCoefs = CQS_parameters.kCoefs
-    hTuples = CQS_parameters.cartan.h
-    hCoefs = CQS_parameters.hCoefs
-
-    # Make Qiskit Quantum Circuit.
-    qc = QuantumCircuit(num_qubits)
-
-    # K^\dag.
-    for kTuple, kCoef in zip(kTuples, kCoefs):
-        kString = str(IO.paulilabel(kTuple))
-        gate = PauliEvolutionGate(Pauli(kString[::-1]), time=kCoef) 
-        qc.append(gate, range(num_qubits))
-    qc.barrier()
-
-    # H.
-    for hTuple, hCoef in zip(hTuples, hCoefs):
-        hString = str(IO.paulilabel(hTuple))
-        gate = PauliEvolutionGate(Pauli(hString[::-1]), 
-                                  time=np.real(hCoef)*time_evolve) # WLOG convert complex to real
-        qc.append(gate, range(num_qubits))
-    qc.barrier()
-
-    # K.
-    for kTuple, kCoef in reversed(list(zip(kTuples, kCoefs))):
-        kString = str(IO.paulilabel(kTuple))
-        gate = PauliEvolutionGate(Pauli(kString[::-1]), time=-kCoef)
-        qc.append(gate, range(num_qubits))
 
     return qc
 
@@ -132,4 +176,5 @@ class CartanPlugin(HighLevelSynthesisPlugin):
     def run(self, PauliEvolution, random_seed):
         
         print("Running Cartan Synthesis Plugin...")
+
         return synth_cartan(PauliEvolution, random_seed)

@@ -159,7 +159,7 @@ def synth_cartan_many(paulievolutiongate,
     
     else:
 
-        k_perms = list(itertools.permutations(CQS_Cartan.k))
+        k_perms = itertools.permutations(CQS_Cartan.k)
         sampled_k_perms = random.sample(k_perms, size)
         qc_list = []
 
