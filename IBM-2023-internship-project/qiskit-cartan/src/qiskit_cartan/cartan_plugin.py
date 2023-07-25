@@ -82,19 +82,22 @@ def pauli_string_to_tuple(pauli_string):
 
 
 # Define the function to synthesize a given PauliEvolutionGate.
-def synth_cartan(paulievolutiongate, random_seed):
+def synth_cartan(paulievolutiongate, random_seed, involution="evenOdd"):
     """Cartan synthesis of a PauliEvolutionGate instance based on the method developed by the Kemper group.
 
         Args:
             paulievolutiongate (PauliEvolutionGate): a high-level definition of the unitary which implements
-            the time evolution under a Hamiltonian consisting of Pauli terms.
+                                                     the time evolution under a Hamiltonian consisting of Pauli terms.
             random_seed (Int): seed to set the ordering of factors in K and the starting element of h. 
                                Avoid using 0 to prevent unusual behavior.
                                If equal to -1, use the lexicographic ordering of pauli factors in K. 
                                Otherwise, use a random ordering.
+            involution (Str): The involution used for the Cartan decomposition. 
+                                The default involution is "evenOdd". Other options include
+                                "knejaGlaser", "countX", "countY", "countZ".
 
         Return:
-            QuantumCircuit: a circuit implementation of the input PauliEvolutionGate via a Cartan Decomposition.
+            QuantumCircuit: a circuit implementation of the input PauliEvolutionGate via a Cartan decomposition.
 
         Raises:
             QiskitError: if arg is not an instance of PauliEvolutionGate.
@@ -123,9 +126,6 @@ def synth_cartan(paulievolutiongate, random_seed):
     
     # Make tuple of lists to later create Hamiltonian object.
     Ham_terms = tuple([Ham_PauliCoeffs, Ham_PauliTuples])
-    
-    # Later look into involution to be used,
-    # But for now use a working default involution.
 
     # Make empty CQS Hamiltonian object.
     CQS_Ham = Hamiltonian(num_qubits)
@@ -143,7 +143,7 @@ def synth_cartan(paulievolutiongate, random_seed):
 
         CQS_Cartan = Cartan(CQS_Ham, manualMode=1)
         CQS_Cartan.g = CQS_Cartan.makeGroup(CQS_Cartan.HTuples)
-        CQS_Cartan.decompose(involutionName = 'evenOdd')
+        CQS_Cartan.decompose(involutionName = involution)
 
     except Exception as e:
         
@@ -173,8 +173,8 @@ def synth_cartan(paulievolutiongate, random_seed):
 # Define the High Level Synthesis Plugin.
 class CartanPlugin(HighLevelSynthesisPlugin):
 
-    def run(self, PauliEvolution, random_seed):
+    def run(self, PauliEvolution, random_seed, involution):
         
         print("Running Cartan Synthesis Plugin...")
 
-        return synth_cartan(PauliEvolution, random_seed)
+        return synth_cartan(PauliEvolution, random_seed, involution)

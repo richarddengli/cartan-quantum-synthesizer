@@ -1,10 +1,12 @@
 # How to write and use a Qiskit transpiler plugin
 In this file, we will outline all the steps necessary to write and use a custom Qiskit transpiler plugin. This is meant to supplement the existing Qiskit tutorials and documentation.
 
-## Writing a plugin
-Transpilation is the process of transforming some abstract quantum circuit into a realistic circuit executable on the desired backend. In Qiskit, this overall transformation is broken down into conceptually clear "stages", which are in turn composed of single circuit transformations known as "transpiler passes".
-In particular, the transpilation workflow can be customized through "plugins", which allow the developer to implement their own transpiler passes beyond those already installed in Qiskit. Qiskit plugins leverage the more general functionality of [entry points](https://setuptools.pypa.io/en/latest/userguide/entry_point.html) in the `setuptools` Python library.
+# Introduction
+Transpilation is the process of transforming some abstract or high-level quantum circuit into an equivalent or nearly equivalent circuit executable on the desired backend. In Qiskit, this overall transformation is composed of individual circuit transformations known as "transpiler passes". Often these passes are grouped together into "stages" according to the nature of the transformation they affect. A `PassManager` object organizes how its stages (if it has any) and their respective passes are ordered and scheduled. For example, the `transpile()` function by default generates a preset staged PassManager. 
 
+While Qiskit offers a variety of built-in passes, the transpilation workflow can be customized freely by the user by writing their own passes (for example, see section "Implementing a BasicMapper Pass" of [this tutorial](https://qiskit.org/documentation/tutorials/circuits_advanced/04_transpiler_passes_and_passmanager.html#Implementing-a-BasicMapper-Pass)). Transpiler "plugins" build on top of this, allowing users to interface custom passes directly with `transpile()` and different PassManagers. Currently there are two categories of plugins available: (1) [preset passmanager plugins](https://qiskit.org/documentation/apidoc/transpiler_plugins.html) and (2) [synthesis plugins](https://qiskit.org/documentation/apidoc/transpiler_synthesis_plugins.html#module-qiskit.transpiler.passes.synthesis.plugin). Plugins function by using the more general functionality of [entry points](https://setuptools.pypa.io/en/latest/userguide/entry_point.html) in the `setuptools` Python library.
+
+## Writing a plugin
 To write a plugin, follow these steps.
 
 1. Activate a Python virtual environment and install Qiskit. 
@@ -12,6 +14,8 @@ To write a plugin, follow these steps.
 3. In `src\<source_folder_name>`, create an empty `__init__.py` file. This will tell Python to treat the `src\<source_folder_name>` folder as a Python package (to be later interfaced with Qiskit).
 4. In `src\<source_folder_name>`, create an empty `<plugin_file_name>.py` file. 
 5. In `<plugin_file_name>.py`, we shall inherit a Qiskit plugin class. Here we demonstrate with the example of inheriting a `HighLevelSynthesisPlugin` class, thereby creating a plugin for a high-level synthesis pass. This pass traverses each gate of a `QuantumCircuit` instance; if that gate is a highlevel_object, we shall synthesize it using a custom function `convert_highlevel_object`. This is implemented by the following code:
+
+
     
     ```
     def convert_highlevel_object(highlevel_object, **options):
@@ -89,4 +93,7 @@ To use a plugin, follow these steps.
 
     logging.basicConfig(level='DEBUG')
     ```
-    before any testing.
+    before any testing. To stop logging, just run
+    ```
+    logging.basicConfig()
+    ```
