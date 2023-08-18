@@ -46,7 +46,7 @@ def generate_cartan_circuit(CQS_Cartan, time_evolve):
     for kTuple, kCoef in zip(kTuples, kCoefs):
 
         kString = str(IO.paulilabel(kTuple))
-        gate = PauliEvolutionGate(Pauli(kString[::-1]), time=kCoef) 
+        gate = PauliEvolutionGate(Pauli(kString), time=kCoef) 
         qc.append(gate, range(num_qubits))
 
     qc.barrier()
@@ -55,7 +55,7 @@ def generate_cartan_circuit(CQS_Cartan, time_evolve):
     for hTuple, hCoef in zip(hTuples, hCoefs):
 
         hString = str(IO.paulilabel(hTuple))
-        gate = PauliEvolutionGate(Pauli(hString[::-1]), 
+        gate = PauliEvolutionGate(Pauli(hString), 
                                 time=np.real(hCoef)*time_evolve) # WLOG convert complex to real
         qc.append(gate, range(num_qubits))
 
@@ -65,7 +65,7 @@ def generate_cartan_circuit(CQS_Cartan, time_evolve):
     for kTuple, kCoef in reversed(list(zip(kTuples, kCoefs))):
 
         kString = str(IO.paulilabel(kTuple))
-        gate = PauliEvolutionGate(Pauli(kString[::-1]), time=-kCoef)
+        gate = PauliEvolutionGate(Pauli(kString), time=-kCoef)
         qc.append(gate, range(num_qubits))
 
     return qc
@@ -178,3 +178,4 @@ class CartanPlugin(HighLevelSynthesisPlugin):
         print("Running Cartan Synthesis Plugin...")
 
         return synth_cartan(PauliEvolution, random_seed, involution)
+    
